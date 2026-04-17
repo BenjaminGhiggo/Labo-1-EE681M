@@ -31,6 +31,7 @@ begin
 
 	-- -------------------------------------------------------
 	-- PROCESO 1: Registro de estado y contadores (secuencial)
+	-- Flip-flops D con reset asincrono (activo bajo)
 	-- -------------------------------------------------------
 	process (clock, resetn)
 	begin
@@ -47,10 +48,11 @@ begin
 
 	-- -------------------------------------------------------
 	-- PROCESO 2: Logica de siguiente estado y salidas (combinacional)
+	-- Modelo Moore: salidas dependen SOLO del estado actual
 	-- -------------------------------------------------------
 	process (estado_actual, go, i_reg, j_reg)
 	begin
-		-- Valores por defecto (evitar latches)
+		-- Valores por defecto (evitar latches en sintesis)
 		estado_sig <= estado_actual;
 		i_next     <= i_reg;
 		j_next     <= j_reg;
@@ -61,7 +63,7 @@ begin
 
 		case estado_actual is
 
-			-- S0: estado de reset, esperar go='1'
+			-- S0: estado de reset, esperar go='1' para iniciar
 			when S0 =>
 				if go = '1' then
 					estado_sig <= S1;
@@ -83,7 +85,7 @@ begin
 					estado_sig <= S3;
 				end if;
 
-			-- S3: preparar indices, j = i + 1
+			-- S3: preparar indice j = i + 1 para nueva pasada
 			when S3 =>
 				j_next     <= i_reg + 1;
 				estado_sig <= S4;
@@ -93,30 +95,32 @@ begin
 				control    <= "100";
 				estado_sig <= S5;
 
-			-- S5: incrementar j
+			-- S5: verificar si j llego al limite (j=7)
+			-- Se verifica DESPUES de comparar y ANTES de incrementar
+			-- para no saltarse la comparacion en j=7
 			when S5 =>
-				j_next     <= j_reg + 1;
-				estado_sig <= S6;
-
-			-- S6: verificar si j llego al limite
-			when S6 =>
 				if j_reg = to_unsigned(7, 3) then
 					estado_sig <= S7;
 				else
-					estado_sig <= S4;
+					estado_sig <= S6;
 				end if;
+
+			-- S6: incrementar j y volver a comparar
+			when S6 =>
+				j_next     <= j_reg + 1;
+				estado_sig <= S4;
 
 			-- S7: incrementar i
 			when S7 =>
 				i_next     <= i_reg + 1;
 				estado_sig <= S8;
 
-			-- S8: verificar si i llego al limite
+			-- S8: verificar si i supero el limite (i=7 significa que ya
+			-- se procesaron todos los pares, incluyendo i=6 vs j=7)
 			when S8 =>
-				if i_reg = to_unsigned(6, 3) then
+				if i_reg = to_unsigned(7, 3) then
 					estado_sig <= S9;
 				else
-					j_next     <= i_reg + 2;
 					estado_sig <= S3;
 				end if;
 

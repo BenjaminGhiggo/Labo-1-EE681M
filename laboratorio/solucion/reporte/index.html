@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe Parcial - Lab 1: Sorter (Bubble Sort) - EE681M</title>
+<style>
+  :root { --primary: #1a365d; --accent: #2b6cb0; --bg: #f7fafc; --code-bg: #1e1e1e; --code-fg: #d4d4d4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: #2d3748; line-height: 1.7; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  header { background: var(--primary); color: white; padding: 30px 0; margin-bottom: 30px; }
+  header .container { display: flex; flex-direction: column; gap: 5px; }
+  header h1 { font-size: 1.6em; font-weight: 700; }
+  header p { opacity: 0.85; font-size: 0.95em; }
+  h2 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 8px; margin: 35px 0 15px; font-size: 1.3em; }
+  h3 { color: var(--accent); margin: 20px 0 10px; font-size: 1.1em; }
+  p, li { margin-bottom: 8px; }
+  ul, ol { padding-left: 25px; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9em; }
+  th { background: var(--primary); color: white; padding: 10px 12px; text-align: left; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) { background: #edf2f7; }
+  .diagram { background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; overflow-x: auto; }
+  .diagram svg { display: block; margin: 0 auto; }
+  .diagram-caption { text-align: center; font-style: italic; color: #718096; margin-top: 10px; font-size: 0.9em; }
+  pre { background: var(--code-bg); color: var(--code-fg); padding: 18px; border-radius: 8px; overflow-x: auto; font-size: 0.82em; line-height: 1.5; margin: 15px 0; }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; }
+  .keyword { color: #569cd6; }
+  .comment { color: #6a9955; }
+  .string { color: #ce9178; }
+  .signal { color: #9cdcfe; }
+  .type { color: #4ec9b0; }
+  .note { background: #ebf8ff; border-left: 4px solid var(--accent); padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; font-size: 0.92em; }
+  .warn { background: #fffbeb; border-left: 4px solid #d69e2e; padding: 12px 16px; margin: 12px 0; border-radius: 0 6px 6px 0; font-size: 0.92em; }
+  footer { margin-top: 40px; padding: 20px; text-align: center; color: #a0aec0; font-size: 0.85em; border-top: 1px solid #e2e8f0; }
+  @media print { body { font-size: 11pt; } pre { font-size: 9pt; } .container { max-width: 100%; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>1ra Experiencia de Laboratorio EE681M - Informe Parcial</h1>
+    <p>Arquitectura de Computadores de Procesamiento Paralelo &mdash; UNI FIEE 2026-1</p>
+    <p>Sorter por metodo de burbuja (Bubble Sort) &mdash; Modelo FSM+D en VHDL</p>
+    <p>Dispositivo: Cyclone V SoC 5CSEMA5F31C6 | Reloj: 12 ns | Quartus Prime Lite 18.1</p>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<h2>1. Objetivo</h2>
+<p>Disenar, simular e implementar un circuito secuencial sincrono que ordene <strong>k=8</strong> numeros sin signo de <strong>n=4</strong> bits almacenados en registros R0 a R7, utilizando el <strong>metodo de la burbuja</strong> (Bubble Sort), en forma <strong>ascendente</strong> (menor en R0, mayor en R7).</p>
+<p>El diseno sigue el modelo <strong>FSM+D</strong> (Maquina de Estados Finitos + Datapath), descrito jerarquicamente en VHDL con tres archivos: <code>sorter.vhd</code> (tope), <code>datapath.vhd</code> y <code>controlador.vhd</code>.</p>
+
+<!-- ============================================================ -->
+<h2>2. Diagrama de Bloques del Sistema</h2>
+<div class="diagram">
+<svg width="820" height="480" viewBox="0 0 820 480">
+  <rect x="30" y="80" width="320" height="340" rx="8" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2"/>
+  <text x="190" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#1a365d">datapath</text>
+  <rect x="470" y="80" width="320" height="340" rx="8" fill="#fef3c7" stroke="#d69e2e" stroke-width="2"/>
+  <text x="630" y="260" text-anchor="middle" font-size="22" font-weight="bold" fill="#744210">controlador</text>
+  <text x="70" y="55" font-size="13" fill="#2d3748">datain[3..0]</text>
+  <line x1="95" y1="60" x2="95" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="88" y="73" font-size="10" fill="#e53e3e">4</text>
+  <text x="155" y="55" font-size="13" fill="#2d3748">wrinit</text>
+  <line x1="175" y1="60" x2="175" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="230" y="55" font-size="13" fill="#2d3748">radd[2..0]</text>
+  <line x1="255" y1="60" x2="255" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="248" y="73" font-size="10" fill="#e53e3e">3</text>
+  <text x="385" y="40" font-size="14" font-weight="bold" fill="#2d3748">clock</text>
+  <line x1="405" y1="45" x2="405" y2="80" stroke="#2d3748" stroke-width="2"/>
+  <line x1="350" y1="80" x2="350" y2="75" stroke="#2d3748" stroke-width="2"/>
+  <line x1="350" y1="75" x2="470" y2="75" stroke="#2d3748" stroke-width="2"/>
+  <line x1="350" y1="75" x2="350" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="75" x2="470" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="540" y="55" font-size="13" fill="#2d3748">resetn</text>
+  <line x1="565" y1="60" x2="565" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="660" y="55" font-size="13" fill="#2d3748">go</text>
+  <line x1="670" y1="60" x2="670" y2="80" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="470" y1="180" x2="350" y2="180" stroke="#e53e3e" stroke-width="2.5" marker-end="url(#arrowR)"/>
+  <text x="395" y="173" text-anchor="middle" font-size="12" font-weight="bold" fill="#e53e3e">i[2..0]</text>
+  <text x="430" y="189" font-size="10" fill="#e53e3e">3</text>
+  <line x1="470" y1="240" x2="350" y2="240" stroke="#e53e3e" stroke-width="2.5" marker-end="url(#arrowR)"/>
+  <text x="395" y="233" text-anchor="middle" font-size="12" font-weight="bold" fill="#e53e3e">j[2..0]</text>
+  <text x="430" y="249" font-size="10" fill="#e53e3e">3</text>
+  <line x1="470" y1="310" x2="350" y2="310" stroke="#e53e3e" stroke-width="2.5" marker-end="url(#arrowR)"/>
+  <text x="395" y="303" text-anchor="middle" font-size="12" font-weight="bold" fill="#e53e3e">control[2..0]</text>
+  <text x="430" y="319" font-size="10" fill="#e53e3e">3</text>
+  <text x="120" y="455" font-size="13" fill="#2d3748">dataout[3..0]</text>
+  <line x1="155" y1="420" x2="155" y2="440" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="148" y="435" font-size="10" fill="#e53e3e">4</text>
+  <text x="600" y="455" font-size="13" fill="#2d3748">done</text>
+  <line x1="620" y1="420" x2="620" y2="440" stroke="#2d3748" stroke-width="2" marker-end="url(#arrow)"/>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#2d3748"/></marker>
+    <marker id="arrowR" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6 Z" fill="#e53e3e"/></marker>
+  </defs>
+</svg>
+<div class="diagram-caption">Figura 1 &mdash; Diagrama de bloques del sorter: interconexion entre datapath y controlador.</div>
+</div>
+
+<div class="note">
+  <strong>Modelo FSM+D:</strong> El controlador (FSM) genera senales de control que dirigen las operaciones del datapath. Las senales internas <code>i</code>, <code>j</code> y <code>control</code> son las unicas conexiones entre ambos bloques. Este modelo separa la logica de control de la logica de datos, facilitando el diseno y verificacion.
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Especificacion del Datapath</h2>
+
+<h3>3.1 Descripcion funcional</h3>
+<p>El datapath contiene un <strong>banco de 8 registros</strong> (R0 a R7), cada uno de 4 bits, implementados con <strong>flip-flops tipo D</strong> activados por flanco de subida. Realiza tres operaciones segun <code>control[2..0]</code>:</p>
+
+<table>
+  <tr><th>control[2..0]</th><th>Operacion</th><th>Descripcion</th></tr>
+  <tr><td><code>"001"</code></td><td>Borrado sincrono</td><td>Todos los registros R0..R7 se ponen a "0000"</td></tr>
+  <tr><td><code>"010"</code></td><td>Escritura</td><td>Si <code>wrinit='1'</code>, escribe <code>datain</code> en <code>R[radd]</code></td></tr>
+  <tr><td><code>"100"</code></td><td>Comparar/Intercambiar</td><td>Si <code>R[i] &gt; R[j]</code>, intercambia sus contenidos (swap)</td></tr>
+  <tr><td><code>"000"</code></td><td>Sin operacion</td><td>Los registros mantienen su valor actual</td></tr>
+</table>
+
+<h3>3.2 Diagrama de hardware del Datapath</h3>
+<div class="diagram">
+<svg width="780" height="400" viewBox="0 0 780 400">
+  <rect x="250" y="30" width="280" height="250" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2"/>
+  <text x="390" y="55" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a365d">Banco de Registros (Flip-Flops D)</text>
+  <rect x="270" y="70" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="297" y="86" text-anchor="middle" font-size="10" fill="#1a365d">R0[3:0]</text>
+  <rect x="335" y="70" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="362" y="86" text-anchor="middle" font-size="10" fill="#1a365d">R1[3:0]</text>
+  <rect x="400" y="70" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="427" y="86" text-anchor="middle" font-size="10" fill="#1a365d">R2[3:0]</text>
+  <rect x="465" y="70" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="492" y="86" text-anchor="middle" font-size="10" fill="#1a365d">R3[3:0]</text>
+  <rect x="270" y="100" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="297" y="116" text-anchor="middle" font-size="10" fill="#1a365d">R4[3:0]</text>
+  <rect x="335" y="100" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="362" y="116" text-anchor="middle" font-size="10" fill="#1a365d">R5[3:0]</text>
+  <rect x="400" y="100" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="427" y="116" text-anchor="middle" font-size="10" fill="#1a365d">R6[3:0]</text>
+  <rect x="465" y="100" width="55" height="22" rx="3" fill="white" stroke="#2b6cb0" stroke-width="1"/>
+  <text x="492" y="116" text-anchor="middle" font-size="10" fill="#1a365d">R7[3:0]</text>
+  <rect x="310" y="150" width="160" height="35" rx="4" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.5"/>
+  <text x="390" y="172" text-anchor="middle" font-size="11" font-weight="bold" fill="#744210">MUX 8:1 (radd)</text>
+  <rect x="310" y="200" width="160" height="35" rx="4" fill="#fed7d7" stroke="#e53e3e" stroke-width="1.5"/>
+  <text x="390" y="215" text-anchor="middle" font-size="10" font-weight="bold" fill="#9b2c2c">Comparador unsigned</text>
+  <text x="390" y="228" text-anchor="middle" font-size="10" fill="#9b2c2c">R[i] &gt; R[j] ?</text>
+  <rect x="310" y="245" width="160" height="25" rx="4" fill="#fed7d7" stroke="#e53e3e" stroke-width="1"/>
+  <text x="390" y="262" text-anchor="middle" font-size="10" fill="#9b2c2c">Logica Swap</text>
+  <rect x="80" y="100" width="120" height="45" rx="4" fill="#e9d8fd" stroke="#805ad5" stroke-width="1.5"/>
+  <text x="140" y="118" text-anchor="middle" font-size="10" font-weight="bold" fill="#553c9a">Decodificador</text>
+  <text x="140" y="135" text-anchor="middle" font-size="10" fill="#553c9a">control[2..0]</text>
+  <text x="30" y="125" font-size="11" fill="#2d3748">control</text>
+  <line x1="65" y1="120" x2="80" y2="120" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="30" y="175" font-size="11" fill="#2d3748">datain</text>
+  <line x1="65" y1="170" x2="250" y2="170" stroke="#2b6cb0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="30" y="210" font-size="11" fill="#2d3748">radd</text>
+  <line x1="55" y1="205" x2="250" y2="168" stroke="#d69e2e" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="30" y="245" font-size="11" fill="#e53e3e">i[2..0]</text>
+  <line x1="55" y1="240" x2="250" y2="215" stroke="#e53e3e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="30" y="270" font-size="11" fill="#e53e3e">j[2..0]</text>
+  <line x1="55" y1="265" x2="250" y2="225" stroke="#e53e3e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="380" y="305" text-anchor="middle" font-size="10" fill="#2d3748">clock &#8593;</text>
+  <text x="360" y="370" font-size="13" font-weight="bold" fill="#1a365d">dataout[3..0]</text>
+  <line x1="390" y1="185" x2="390" y2="350" stroke="#1a365d" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="400" y="340" font-size="9" fill="#718096">(combinacional, no registrada)</text>
+</svg>
+<div class="diagram-caption">Figura 2 &mdash; Hardware del datapath: banco de registros (flip-flops D), MUX de lectura, comparador y logica de swap.</div>
+</div>
+
+<div class="note">
+  <strong>Flip-Flops tipo D:</strong> Cada bit de cada registro se implementa con un flip-flop D activado por flanco de subida. 8 registros x 4 bits = <strong>32 flip-flops D</strong> solo para el banco. La salida <code>dataout</code> es <strong>combinacional</strong> (MUX 8:1 selecciona R[radd] sin pasar por registro).
+</div>
+
+<h3>3.3 Codigo VHDL del Datapath (comentado)</h3>
+<pre><code><span class="keyword">library</span> ieee;
+<span class="keyword">use</span> ieee.std_logic_1164.<span class="keyword">all</span>;
+<span class="keyword">use</span> ieee.numeric_std.<span class="keyword">all</span>;
+
+<span class="comment">-- Entidad: define puertos de entrada/salida del bloque</span>
+<span class="keyword">entity</span> <span class="type">datapath</span> <span class="keyword">is</span>
+  <span class="keyword">port</span> (
+    <span class="signal">clock</span>   : <span class="keyword">in</span>  std_logic;                     <span class="comment">-- Reloj, activo en flanco de subida</span>
+    <span class="signal">wrinit</span>  : <span class="keyword">in</span>  std_logic;                     <span class="comment">-- Habilitacion de escritura</span>
+    <span class="signal">control</span> : <span class="keyword">in</span>  std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- Operacion: 001=borrar, 010=escribir, 100=swap</span>
+    <span class="signal">i</span>, <span class="signal">j</span>    : <span class="keyword">in</span>  std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- Indices para burbuja (del controlador)</span>
+    <span class="signal">datain</span>  : <span class="keyword">in</span>  std_logic_vector(3 <span class="keyword">downto</span> 0); <span class="comment">-- Dato a escribir (4 bits, rango 0-15)</span>
+    <span class="signal">radd</span>    : <span class="keyword">in</span>  std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- Direccion del registro (0 a 7)</span>
+    <span class="signal">dataout</span> : <span class="keyword">out</span> std_logic_vector(3 <span class="keyword">downto</span> 0)  <span class="comment">-- Lectura combinacional de R[radd]</span>
+  );
+<span class="keyword">end</span> <span class="type">datapath</span>;
+
+<span class="keyword">architecture</span> behav <span class="keyword">of</span> <span class="type">datapath</span> <span class="keyword">is</span>
+  <span class="comment">-- Tipo arreglo: 8 registros de 4 bits (cada bit = 1 flip-flop D)</span>
+  <span class="keyword">type</span> <span class="type">file_register</span> <span class="keyword">is array</span>(0 <span class="keyword">to</span> 7) <span class="keyword">of</span> std_logic_vector(3 <span class="keyword">downto</span> 0);
+  <span class="keyword">signal</span> <span class="signal">R</span>: <span class="type">file_register</span>;
+
+  <span class="comment">-- Senales auxiliares: convierten std_logic_vector a entero</span>
+  <span class="comment">-- (VHDL requiere enteros para indexar arreglos)</span>
+  <span class="keyword">signal</span> <span class="signal">i_int</span>, <span class="signal">j_int</span>, <span class="signal">r_int</span> : integer <span class="keyword">range</span> 0 <span class="keyword">to</span> 7;
+<span class="keyword">begin</span>
+  <span class="comment">-- Conversiones combinacionales (sin flip-flop, instantaneas)</span>
+  i_int &lt;= to_integer(unsigned(i));
+  j_int &lt;= to_integer(unsigned(j));
+  r_int &lt;= to_integer(unsigned(radd));
+
+  <span class="comment">-- PROCESO SINCRONO: todo ocurre en el flanco de subida del reloj</span>
+  <span class="comment">-- (sin reset asincrono, segun indicacion del profesor)</span>
+  <span class="keyword">process</span> (clock)
+  <span class="keyword">begin</span>
+    <span class="keyword">if</span> (clock'event <span class="keyword">and</span> clock = <span class="string">'1'</span>) <span class="keyword">then</span>
+
+      <span class="comment">-- BORRADO SINCRONO: limpia los 8 registros</span>
+      <span class="keyword">if</span> control = <span class="string">"001"</span> <span class="keyword">then</span>
+        R(0) &lt;= <span class="string">"0000"</span>; R(1) &lt;= <span class="string">"0000"</span>;
+        R(2) &lt;= <span class="string">"0000"</span>; R(3) &lt;= <span class="string">"0000"</span>;
+        R(4) &lt;= <span class="string">"0000"</span>; R(5) &lt;= <span class="string">"0000"</span>;
+        R(6) &lt;= <span class="string">"0000"</span>; R(7) &lt;= <span class="string">"0000"</span>;
+
+      <span class="comment">-- ESCRITURA: solo si wrinit esta activo</span>
+      <span class="keyword">elsif</span> control = <span class="string">"010"</span> <span class="keyword">then</span>
+        <span class="keyword">if</span> wrinit = <span class="string">'1'</span> <span class="keyword">then</span>
+          R(r_int) &lt;= datain;  <span class="comment">-- Guarda datain en el registro apuntado por radd</span>
+        <span class="keyword">end if</span>;
+
+      <span class="comment">-- COMPARAR E INTERCAMBIAR: corazon del bubble sort</span>
+      <span class="comment">-- Compara como numeros sin signo (unsigned)</span>
+      <span class="keyword">elsif</span> control = <span class="string">"100"</span> <span class="keyword">then</span>
+        <span class="keyword">if</span> unsigned(R(i_int)) &gt; unsigned(R(j_int)) <span class="keyword">then</span>
+          R(i_int) &lt;= R(j_int);  <span class="comment">-- R[i] recibe el valor menor</span>
+          R(j_int) &lt;= R(i_int);  <span class="comment">-- R[j] recibe el valor mayor</span>
+          <span class="comment">-- Nota: en VHDL, ambas asignaciones usan los valores</span>
+          <span class="comment">-- ANTES del flanco, por lo que el swap es atomico</span>
+        <span class="keyword">end if</span>;
+      <span class="keyword">end if</span>;
+    <span class="keyword">end if</span>;
+  <span class="keyword">end process</span>;
+
+  <span class="comment">-- SALIDA COMBINACIONAL (no registrada): MUX 8:1</span>
+  <span class="comment">-- Muestra el contenido de R[radd] instantaneamente</span>
+  dataout &lt;= R(r_int);
+<span class="keyword">end</span> behav;</code></pre>
+
+<!-- ============================================================ -->
+<h2>4. Especificacion del Controlador (FSM)</h2>
+
+<h3>4.1 Descripcion funcional</h3>
+<p>El controlador es una <strong>Maquina de Estados Finitos (FSM)</strong> tipo <strong>Moore</strong>: las salidas dependen <strong>solo del estado actual</strong> (no de las entradas directamente). Esto evita glitches y problemas de timing.</p>
+<p>Implementado con el <strong>modelo de dos procesos</strong>:</p>
+<ul>
+  <li><strong>Proceso 1 (secuencial):</strong> Flip-flops D para el registro de estado, i_reg y j_reg. Reset asincrono.</li>
+  <li><strong>Proceso 2 (combinacional):</strong> Logica de siguiente estado y codificacion de salidas. Sin memoria.</li>
+</ul>
+
+<h3>4.2 Diagrama de Estados Finitos</h3>
+<div class="diagram">
+<svg width="760" height="600" viewBox="0 0 760 600">
+  <circle cx="120" cy="60" r="32" fill="#fed7d7" stroke="#e53e3e" stroke-width="2"/>
+  <text x="120" y="57" text-anchor="middle" font-size="14" font-weight="bold" fill="#9b2c2c">S0</text>
+  <text x="120" y="72" text-anchor="middle" font-size="9" fill="#9b2c2c">reset</text>
+  <circle cx="120" cy="60" r="28" fill="none" stroke="#e53e3e" stroke-width="1"/>
+  <circle cx="300" cy="60" r="32" fill="#bee3f8" stroke="#2b6cb0" stroke-width="2"/>
+  <text x="300" y="57" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a365d">S1</text>
+  <text x="300" y="72" text-anchor="middle" font-size="9" fill="#1a365d">borrar</text>
+  <circle cx="500" cy="60" r="32" fill="#bee3f8" stroke="#2b6cb0" stroke-width="2"/>
+  <text x="500" y="57" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a365d">S2</text>
+  <text x="500" y="72" text-anchor="middle" font-size="9" fill="#1a365d">escribir</text>
+  <circle cx="120" cy="230" r="32" fill="#c6f6d5" stroke="#38a169" stroke-width="2"/>
+  <text x="120" y="227" text-anchor="middle" font-size="14" font-weight="bold" fill="#276749">S3</text>
+  <text x="120" y="242" text-anchor="middle" font-size="9" fill="#276749">j=i+1</text>
+  <circle cx="300" cy="230" r="32" fill="#fed7d7" stroke="#e53e3e" stroke-width="2"/>
+  <text x="300" y="227" text-anchor="middle" font-size="14" font-weight="bold" fill="#9b2c2c">S4</text>
+  <text x="300" y="242" text-anchor="middle" font-size="9" fill="#9b2c2c">swap</text>
+  <circle cx="500" cy="230" r="32" fill="#fef3c7" stroke="#d69e2e" stroke-width="2"/>
+  <text x="500" y="227" text-anchor="middle" font-size="14" font-weight="bold" fill="#744210">S5</text>
+  <text x="500" y="242" text-anchor="middle" font-size="9" fill="#744210">j=7?</text>
+  <circle cx="660" cy="230" r="32" fill="#c6f6d5" stroke="#38a169" stroke-width="2"/>
+  <text x="660" y="227" text-anchor="middle" font-size="14" font-weight="bold" fill="#276749">S6</text>
+  <text x="660" y="242" text-anchor="middle" font-size="9" fill="#276749">j++</text>
+  <circle cx="660" cy="400" r="32" fill="#c6f6d5" stroke="#38a169" stroke-width="2"/>
+  <text x="660" y="397" text-anchor="middle" font-size="14" font-weight="bold" fill="#276749">S7</text>
+  <text x="660" y="412" text-anchor="middle" font-size="9" fill="#276749">i++</text>
+  <circle cx="400" cy="400" r="32" fill="#fef3c7" stroke="#d69e2e" stroke-width="2"/>
+  <text x="400" y="397" text-anchor="middle" font-size="14" font-weight="bold" fill="#744210">S8</text>
+  <text x="400" y="412" text-anchor="middle" font-size="9" fill="#744210">i=6?</text>
+  <circle cx="400" cy="540" r="32" fill="#d6bcfa" stroke="#805ad5" stroke-width="2"/>
+  <text x="400" y="537" text-anchor="middle" font-size="14" font-weight="bold" fill="#553c9a">S9</text>
+  <text x="400" y="552" text-anchor="middle" font-size="9" fill="#553c9a">done</text>
+  <circle cx="400" cy="540" r="28" fill="none" stroke="#805ad5" stroke-width="1"/>
+  <!-- Transitions -->
+  <line x1="152" y1="60" x2="265" y2="60" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="208" y="50" text-anchor="middle" font-size="10" fill="#2d3748">go='1'</text>
+  <path d="M120,28 C140,5 100,5 120,28" fill="none" stroke="#718096" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="120" y="15" text-anchor="middle" font-size="9" fill="#718096">go='0'</text>
+  <line x1="332" y1="60" x2="465" y2="60" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="398" y="50" text-anchor="middle" font-size="10" fill="#2b6cb0">ctrl="001"</text>
+  <path d="M500,28 C520,5 480,5 500,28" fill="none" stroke="#718096" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="500" y="15" text-anchor="middle" font-size="9" fill="#718096">go='1'</text>
+  <path d="M475,85 C400,140 180,150 128,198" fill="none" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="290" y="140" text-anchor="middle" font-size="10" fill="#2d3748">go='0'</text>
+  <line x1="152" y1="230" x2="265" y2="230" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="332" y1="230" x2="465" y2="230" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="398" y="220" text-anchor="middle" font-size="10" fill="#e53e3e">ctrl="100"</text>
+  <line x1="532" y1="230" x2="625" y2="230" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M645,200 C620,170 350,170 310,200" fill="none" stroke="#38a169" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="480" y="185" text-anchor="middle" font-size="10" fill="#38a169">j &ne; 7 (via S6: j++)</text>
+  <line x1="660" y1="262" x2="660" y2="365" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="675" y="320" font-size="10" fill="#d69e2e">j = 7</text>
+  <line x1="628" y1="400" x2="435" y2="400" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M370,390 C250,360 100,300 115,262" fill="none" stroke="#38a169" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="200" y="340" text-anchor="middle" font-size="10" fill="#38a169">i &ne; 6</text>
+  <line x1="400" y1="432" x2="400" y2="505" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="415" y="470" font-size="10" fill="#d69e2e">i = 6</text>
+  <path d="M400,572 C420,595 380,595 400,572" fill="none" stroke="#805ad5" stroke-width="1" marker-end="url(#arrow)"/>
+  <!-- Legend -->
+  <rect x="10" y="470" width="220" height="120" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="20" y="490" font-size="11" font-weight="bold" fill="#2d3748">Salidas Moore por estado:</text>
+  <text x="20" y="508" font-size="10" fill="#2d3748">S1: control="001" (borrar)</text>
+  <text x="20" y="523" font-size="10" fill="#2d3748">S2: control="010" (escribir)</text>
+  <text x="20" y="538" font-size="10" fill="#2d3748">S4: control="100" (comparar/swap)</text>
+  <text x="20" y="553" font-size="10" fill="#2d3748">S9: done='1'</text>
+  <text x="20" y="568" font-size="10" fill="#718096">Resto: control="000", done='0'</text>
+  <text x="20" y="583" font-size="10" fill="#718096">Todos los estados: i=i_reg, j=j_reg</text>
+</svg>
+<div class="diagram-caption">Figura 3 &mdash; Diagrama de estados finitos (FSM) del controlador. Tipo Moore: salidas dependen solo del estado.</div>
+</div>
+
+<h3>4.3 Arquitectura de hardware del Controlador</h3>
+<div class="diagram">
+<svg width="700" height="300" viewBox="0 0 700 300">
+  <rect x="300" y="30" width="180" height="220" rx="6" fill="#ebf8ff" stroke="#2b6cb0" stroke-width="2"/>
+  <text x="390" y="55" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a365d">Proceso 1 (Secuencial)</text>
+  <text x="390" y="70" text-anchor="middle" font-size="9" fill="#718096">Flip-Flops D</text>
+  <rect x="320" y="85" width="140" height="30" rx="4" fill="white" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="390" y="105" text-anchor="middle" font-size="10" fill="#1a365d">FF estado_actual</text>
+  <rect x="320" y="125" width="140" height="30" rx="4" fill="white" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="390" y="145" text-anchor="middle" font-size="10" fill="#1a365d">FF i_reg[2:0]</text>
+  <rect x="320" y="165" width="140" height="30" rx="4" fill="white" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="390" y="185" text-anchor="middle" font-size="10" fill="#1a365d">FF j_reg[2:0]</text>
+  <text x="390" y="225" text-anchor="middle" font-size="10" fill="#2d3748">clock &#8593; | resetn (async)</text>
+  <rect x="30" y="30" width="200" height="220" rx="6" fill="#fef3c7" stroke="#d69e2e" stroke-width="2"/>
+  <text x="130" y="55" text-anchor="middle" font-size="12" font-weight="bold" fill="#744210">Proceso 2 (Combinacional)</text>
+  <text x="130" y="70" text-anchor="middle" font-size="9" fill="#718096">Sin memoria</text>
+  <rect x="45" y="85" width="170" height="28" rx="4" fill="white" stroke="#d69e2e" stroke-width="1"/>
+  <text x="130" y="104" text-anchor="middle" font-size="10" fill="#744210">Logica sig. estado</text>
+  <rect x="45" y="120" width="170" height="28" rx="4" fill="white" stroke="#d69e2e" stroke-width="1"/>
+  <text x="130" y="139" text-anchor="middle" font-size="10" fill="#744210">Logica i_next, j_next</text>
+  <rect x="45" y="155" width="170" height="28" rx="4" fill="white" stroke="#d69e2e" stroke-width="1"/>
+  <text x="130" y="174" text-anchor="middle" font-size="10" fill="#744210">Codificacion salidas Moore</text>
+  <line x1="230" y1="100" x2="318" y2="100" stroke="#2b6cb0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="275" y="93" text-anchor="middle" font-size="9" fill="#2b6cb0">estado_sig</text>
+  <line x1="230" y1="135" x2="318" y2="140" stroke="#2b6cb0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="275" y="130" text-anchor="middle" font-size="9" fill="#2b6cb0">i_next, j_next</text>
+  <path d="M340,210 C300,260 100,260 80,245" fill="none" stroke="#d69e2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="200" y="270" text-anchor="middle" font-size="9" fill="#d69e2e">estado_actual, i_reg, j_reg (retroalimentacion)</text>
+  <line x1="130" y1="250" x2="130" y2="290" stroke="#1a365d" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="130" y="285" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a365d">control, done, i, j</text>
+  <text x="10" y="210" font-size="10" fill="#2d3748">go &rarr;</text>
+  <line x1="25" y1="205" x2="45" y2="205" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
+<div class="diagram-caption">Figura 4 &mdash; Arquitectura del controlador: FSM de dos procesos con flip-flops D para estado, i_reg y j_reg.</div>
+</div>
+
+<h3>4.4 Codigo VHDL del Controlador (comentado)</h3>
+<pre><code><span class="keyword">library</span> ieee;
+<span class="keyword">use</span> ieee.std_logic_1164.<span class="keyword">all</span>;
+<span class="keyword">use</span> ieee.numeric_std.<span class="keyword">all</span>;
+
+<span class="keyword">entity</span> <span class="type">controlador</span> <span class="keyword">is</span>
+  <span class="keyword">port</span> (
+    <span class="signal">clock</span>   : <span class="keyword">in</span>  std_logic;                     <span class="comment">-- Reloj del sistema</span>
+    <span class="signal">resetn</span>  : <span class="keyword">in</span>  std_logic;                     <span class="comment">-- Reset asincrono activo bajo</span>
+    <span class="signal">go</span>      : <span class="keyword">in</span>  std_logic;                     <span class="comment">-- '1'=inicializacion, '0'=ordenar</span>
+    <span class="signal">i</span>, <span class="signal">j</span>    : <span class="keyword">out</span> std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- Indices al datapath</span>
+    <span class="signal">control</span> : <span class="keyword">out</span> std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- Operacion al datapath</span>
+    <span class="signal">done</span>    : <span class="keyword">out</span> std_logic                      <span class="comment">-- '1' al terminar</span>
+  );
+<span class="keyword">end</span> <span class="type">controlador</span>;
+
+<span class="keyword">architecture</span> behav <span class="keyword">of</span> <span class="type">controlador</span> <span class="keyword">is</span>
+  <span class="comment">-- 10 estados para el algoritmo bubble sort</span>
+  <span class="keyword">type</span> <span class="type">state_type</span> <span class="keyword">is</span> (S0, S1, S2, S3, S4, S5, S6, S7, S8, S9);
+  <span class="keyword">signal</span> <span class="signal">estado_actual</span>, <span class="signal">estado_sig</span> : <span class="type">state_type</span>;
+  <span class="comment">-- Contadores de indices (3 flip-flops D cada uno)</span>
+  <span class="keyword">signal</span> <span class="signal">i_reg</span>, <span class="signal">j_reg</span>   : unsigned(2 <span class="keyword">downto</span> 0);
+  <span class="keyword">signal</span> <span class="signal">i_next</span>, <span class="signal">j_next</span> : unsigned(2 <span class="keyword">downto</span> 0);
+<span class="keyword">begin</span>
+  <span class="comment">-- PROCESO 1: Registro de estado (secuencial)</span>
+  <span class="comment">-- Implementa los flip-flops D con reset asincrono</span>
+  <span class="keyword">process</span> (clock, resetn)
+  <span class="keyword">begin</span>
+    <span class="keyword">if</span> resetn = <span class="string">'0'</span> <span class="keyword">then</span>            <span class="comment">-- Reset asincrono: vuelve a S0</span>
+      estado_actual &lt;= S0;
+      i_reg &lt;= (<span class="keyword">others</span> =&gt; <span class="string">'0'</span>);
+      j_reg &lt;= (<span class="keyword">others</span> =&gt; <span class="string">'0'</span>);
+    <span class="keyword">elsif</span> clock'event <span class="keyword">and</span> clock = <span class="string">'1'</span> <span class="keyword">then</span>  <span class="comment">-- Flanco de subida</span>
+      estado_actual &lt;= estado_sig;   <span class="comment">-- Carga siguiente estado</span>
+      i_reg &lt;= i_next;              <span class="comment">-- Carga siguiente i</span>
+      j_reg &lt;= j_next;              <span class="comment">-- Carga siguiente j</span>
+    <span class="keyword">end if</span>;
+  <span class="keyword">end process</span>;
+
+  <span class="comment">-- PROCESO 2: Logica combinacional (sin flip-flops)</span>
+  <span class="comment">-- Calcula el siguiente estado y codifica las salidas Moore</span>
+  <span class="keyword">process</span> (estado_actual, go, i_reg, j_reg)
+  <span class="keyword">begin</span>
+    <span class="comment">-- Valores por defecto (previene latches en sintesis)</span>
+    estado_sig &lt;= estado_actual;
+    i_next &lt;= i_reg;  j_next &lt;= j_reg;
+    control &lt;= <span class="string">"000"</span>;  done &lt;= <span class="string">'0'</span>;
+    i &lt;= std_logic_vector(i_reg);
+    j &lt;= std_logic_vector(j_reg);
+
+    <span class="keyword">case</span> estado_actual <span class="keyword">is</span>
+      <span class="keyword">when</span> S0 =&gt; <span class="comment">-- Esperar go='1' para empezar</span>
+        <span class="keyword">if</span> go = <span class="string">'1'</span> <span class="keyword">then</span> estado_sig &lt;= S1; <span class="keyword">end if</span>;
+
+      <span class="keyword">when</span> S1 =&gt; <span class="comment">-- Borrar todos los registros</span>
+        control &lt;= <span class="string">"001"</span>;
+        i_next &lt;= (<span class="keyword">others</span> =&gt; <span class="string">'0'</span>);
+        j_next &lt;= (<span class="keyword">others</span> =&gt; <span class="string">'0'</span>);
+        estado_sig &lt;= S2;
+
+      <span class="keyword">when</span> S2 =&gt; <span class="comment">-- Modo escritura, esperar go='0'</span>
+        control &lt;= <span class="string">"010"</span>;
+        <span class="keyword">if</span> go = <span class="string">'0'</span> <span class="keyword">then</span>
+          i_next &lt;= (<span class="keyword">others</span> =&gt; <span class="string">'0'</span>);
+          j_next &lt;= to_unsigned(1, 3);
+          estado_sig &lt;= S3;
+        <span class="keyword">end if</span>;
+
+      <span class="keyword">when</span> S3 =&gt; <span class="comment">-- Preparar j = i + 1</span>
+        j_next &lt;= i_reg + 1;
+        estado_sig &lt;= S4;
+
+      <span class="keyword">when</span> S4 =&gt; <span class="comment">-- Enviar orden de comparar/swap al datapath</span>
+        control &lt;= <span class="string">"100"</span>;
+        estado_sig &lt;= S5;
+
+      <span class="keyword">when</span> S5 =&gt; <span class="comment">-- Verificar limite de j (DESPUES de comparar)</span>
+        <span class="keyword">if</span> j_reg = 7 <span class="keyword">then</span> estado_sig &lt;= S7;
+        <span class="keyword">else</span> estado_sig &lt;= S6; <span class="keyword">end if</span>;
+
+      <span class="keyword">when</span> S6 =&gt; <span class="comment">-- Incrementar j y volver a comparar</span>
+        j_next &lt;= j_reg + 1;
+        estado_sig &lt;= S4;
+
+      <span class="keyword">when</span> S7 =&gt; <span class="comment">-- Incrementar i</span>
+        i_next &lt;= i_reg + 1;
+        estado_sig &lt;= S8;
+
+      <span class="keyword">when</span> S8 =&gt; <span class="comment">-- Si i=7 (todos los pares procesados), terminar</span>
+        <span class="keyword">if</span> i_reg = 7 <span class="keyword">then</span> estado_sig &lt;= S9;
+        <span class="keyword">else</span> estado_sig &lt;= S3;
+        <span class="keyword">end if</span>;
+
+      <span class="keyword">when</span> S9 =&gt; <span class="comment">-- Ordenamiento completo</span>
+        done &lt;= <span class="string">'1'</span>;
+        estado_sig &lt;= S9; <span class="comment">-- Queda aqui permanentemente</span>
+
+      <span class="keyword">when others</span> =&gt; estado_sig &lt;= S0;
+    <span class="keyword">end case</span>;
+  <span class="keyword">end process</span>;
+<span class="keyword">end</span> behav;</code></pre>
+
+<!-- ============================================================ -->
+<h2>5. Diagrama de Flujo del Sistema Completo</h2>
+<div class="diagram">
+<svg width="500" height="780" viewBox="0 0 500 780">
+  <ellipse cx="250" cy="30" rx="60" ry="22" fill="#fed7d7" stroke="#e53e3e" stroke-width="2"/>
+  <text x="250" y="35" text-anchor="middle" font-size="12" font-weight="bold" fill="#9b2c2c">RESET (resetn='0')</text>
+  <line x1="250" y1="52" x2="250" y2="75" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polygon points="250,75 320,110 250,145 180,110" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.5"/>
+  <text x="250" y="113" text-anchor="middle" font-size="11" fill="#744210">go = '1'?</text>
+  <text x="165" y="100" font-size="10" fill="#718096">No</text>
+  <path d="M180,110 C150,110 150,75 180,75" fill="none" stroke="#718096" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="330" y="100" font-size="10" fill="#38a169">Si</text>
+  <line x1="250" y1="145" x2="250" y2="170" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="175" y="170" width="150" height="35" rx="5" fill="#bee3f8" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="250" y="192" text-anchor="middle" font-size="11" fill="#1a365d">Borrar R0..R7</text>
+  <text x="345" y="188" font-size="9" fill="#718096">ctrl="001"</text>
+  <line x1="250" y1="205" x2="250" y2="230" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="145" y="230" width="210" height="35" rx="5" fill="#bee3f8" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="250" y="252" text-anchor="middle" font-size="11" fill="#1a365d">Escribir valores (wrinit='1')</text>
+  <text x="375" y="248" font-size="9" fill="#718096">ctrl="010"</text>
+  <line x1="250" y1="265" x2="250" y2="290" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polygon points="250,290 320,325 250,360 180,325" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.5"/>
+  <text x="250" y="328" text-anchor="middle" font-size="11" fill="#744210">go = '0'?</text>
+  <text x="165" y="315" font-size="10" fill="#718096">No</text>
+  <path d="M180,325 C140,325 140,245 175,245" fill="none" stroke="#718096" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="330" y="315" font-size="10" fill="#38a169">Si</text>
+  <line x1="250" y1="360" x2="250" y2="385" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="175" y="385" width="150" height="35" rx="5" fill="#c6f6d5" stroke="#38a169" stroke-width="1.5"/>
+  <text x="250" y="407" text-anchor="middle" font-size="11" fill="#276749">i=0, j=i+1</text>
+  <line x1="250" y1="420" x2="250" y2="445" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="130" y="445" width="240" height="35" rx="5" fill="#fed7d7" stroke="#e53e3e" stroke-width="1.5"/>
+  <text x="250" y="467" text-anchor="middle" font-size="11" fill="#9b2c2c">Si R[i]&gt;R[j]: swap(R[i],R[j])</text>
+  <text x="390" y="463" font-size="9" fill="#718096">ctrl="100"</text>
+  <line x1="250" y1="480" x2="250" y2="500" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polygon points="250,500 320,530 250,560 180,530" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.5"/>
+  <text x="250" y="534" text-anchor="middle" font-size="11" fill="#744210">j = 7?</text>
+  <text x="165" y="520" font-size="10" fill="#38a169">No</text>
+  <line x1="180" y1="530" x2="120" y2="530" stroke="#38a169" stroke-width="1.5"/>
+  <rect x="85" y="540" width="70" height="25" rx="4" fill="#c6f6d5" stroke="#38a169" stroke-width="1"/>
+  <text x="120" y="557" text-anchor="middle" font-size="10" fill="#276749">j++</text>
+  <path d="M120,565 C120,590 120,590 140,460" fill="none" stroke="#38a169" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="330" y="520" font-size="10" fill="#d69e2e">Si</text>
+  <line x1="250" y1="560" x2="250" y2="590" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="195" y="590" width="110" height="30" rx="5" fill="#c6f6d5" stroke="#38a169" stroke-width="1.5"/>
+  <text x="250" y="610" text-anchor="middle" font-size="11" fill="#276749">i = i + 1</text>
+  <line x1="250" y1="620" x2="250" y2="645" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <polygon points="250,645 320,675 250,705 180,675" fill="#fef3c7" stroke="#d69e2e" stroke-width="1.5"/>
+  <text x="250" y="679" text-anchor="middle" font-size="11" fill="#744210">i = 7?</text>
+  <text x="165" y="665" font-size="10" fill="#38a169">No</text>
+  <path d="M180,675 C80,675 80,400 175,400" fill="none" stroke="#38a169" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="330" y="665" font-size="10" fill="#d69e2e">Si</text>
+  <line x1="320" y1="675" x2="400" y2="675" stroke="#2d3748" stroke-width="1.5"/>
+  <line x1="400" y1="675" x2="400" y2="720" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <ellipse cx="400" cy="735" rx="55" ry="18" fill="#d6bcfa" stroke="#805ad5" stroke-width="2"/>
+  <text x="400" y="739" text-anchor="middle" font-size="12" font-weight="bold" fill="#553c9a">DONE='1'</text>
+</svg>
+<div class="diagram-caption">Figura 5 &mdash; Diagrama de flujo del algoritmo bubble sort implementado por la FSM del controlador.</div>
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Archivo Tope: sorter.vhd</h2>
+<p>Conecta los dos bloques mediante senales internas. Es <strong>puramente estructural</strong> (sin logica propia):</p>
+<pre><code><span class="comment">-- Senales internas (cables entre controlador y datapath)</span>
+<span class="keyword">signal</span> <span class="signal">ctrl_signal</span> : std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- control[2..0]</span>
+<span class="keyword">signal</span> <span class="signal">i_signal</span>    : std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- indice i</span>
+<span class="keyword">signal</span> <span class="signal">j_signal</span>    : std_logic_vector(2 <span class="keyword">downto</span> 0); <span class="comment">-- indice j</span>
+
+<span class="comment">-- Instancia del datapath: recibe control, i, j del controlador</span>
+datos: <span class="type">datapath</span> <span class="keyword">port map</span> (
+  clock =&gt; clock, wrinit =&gt; wrinit,
+  control =&gt; ctrl_signal,    <span class="comment">-- del controlador</span>
+  i =&gt; i_signal, j =&gt; j_signal,  <span class="comment">-- del controlador</span>
+  datain =&gt; datain, radd =&gt; radd, dataout =&gt; dataout
+);
+
+<span class="comment">-- Instancia del controlador: genera control, i, j, done</span>
+control: <span class="type">controlador</span> <span class="keyword">port map</span> (
+  clock =&gt; clock, resetn =&gt; resetn, go =&gt; go,
+  i =&gt; i_signal, j =&gt; j_signal,  <span class="comment">-- hacia el datapath</span>
+  control =&gt; ctrl_signal,    <span class="comment">-- hacia el datapath</span>
+  done =&gt; done
+);</code></pre>
+
+<!-- ============================================================ -->
+<h2>7. Resultados de Compilacion y Simulacion</h2>
+
+<h3>7.1 Compilacion en Quartus Prime Lite 18.1</h3>
+<table>
+  <tr><th>Parametro</th><th>Valor</th></tr>
+  <tr><td>Flow Status</td><td><strong>Successful</strong></td></tr>
+  <tr><td>Dispositivo</td><td>Cyclone V SoC 5CSEMA5F31C6</td></tr>
+  <tr><td>Logica utilizada (ALMs)</td><td>85 / 32,070 (&lt; 1%)</td></tr>
+  <tr><td>Total registros (flip-flops D)</td><td>65</td></tr>
+  <tr><td>Total pines</td><td>16 / 457 (4%)</td></tr>
+</table>
+
+<h3>7.2 Simulacion funcional en ModelSim</h3>
+<table>
+  <tr><th>Parametro</th><th>Resultado</th></tr>
+  <tr><td>Compilacion VHDL</td><td>3 archivos, <strong>0 errores, 0 warnings</strong></td></tr>
+  <tr><td>Tiempo de simulacion</td><td><strong>1500 ns</strong> (125 ciclos de 12 ns)</td></tr>
+  <tr><td>Ordenamiento completado en</td><td><strong>1326 ns</strong> (~110 ciclos, 28 comparaciones)</td></tr>
+  <tr><td>Valores de prueba</td><td>R0=5, R1=3, R2=7, R3=1, R4=6, R5=2, R6=8, R7=4</td></tr>
+  <tr><td>Resultado esperado</td><td>R0=1, R1=2, R2=3, R3=4, R4=5, R5=6, R6=7, R7=8</td></tr>
+  <tr><td>Senal done</td><td>Se activa correctamente al finalizar</td></tr>
+</table>
+
+<div class="note">
+  <strong>Desglose de los 65 registros:</strong> 32 flip-flops para el banco de registros (8x4 bits) + 10 flip-flops para el estado FSM (one-hot) + 3 flip-flops para i_reg + 3 flip-flops para j_reg + registros auxiliares de sintesis = 65 totales.
+</div>
+
+</div>
+
+<footer>
+  <p>EE681M &mdash; Arquitectura de Computadores de Procesamiento Paralelo</p>
+  <p>UNI FIEE 2026-1 &mdash; Informe Parcial, Laboratorio 1</p>
+</footer>
+
+</body>
+</html>

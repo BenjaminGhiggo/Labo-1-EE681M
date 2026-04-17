@@ -14,7 +14,7 @@ entity sorter is
 		 );
 end sorter;
 
---  Architecture Body, no need to change anything
+--  Architecture Body
 architecture estruct of sorter is
 
 	component datapath
@@ -27,7 +27,7 @@ architecture estruct of sorter is
 			  dataout	: out std_logic_vector (3 downto 0)
 			  );
 	end component;
-	
+
 	component controlador
 		port (clock		: in  std_logic;
 			  resetn	: in  std_logic;
@@ -35,32 +35,35 @@ architecture estruct of sorter is
 			  i, j		: out std_logic_vector (2 downto 0);
 			  control	: out std_logic_vector (2 downto 0);
 			  done		: out std_logic
-		 	  );	
+		 	  );
 	end component;
 
--- you may need to add some signals
-	
+	-- Senales internas que conectan controlador -> datapath
+	signal ctrl_signal : std_logic_vector (2 downto 0);
+	signal i_signal    : std_logic_vector (2 downto 0);
+	signal j_signal    : std_logic_vector (2 downto 0);
+
 begin
 
 	datos: datapath
 	port map (clock		=> clock,
-			  wrinit	=> -- complete
-			  control	=> -- complete
-			  i			=> -- complete
-			  j			=> -- complete
-			  datain 	=> -- complete
-			  radd		=> -- complete
-			  dataout	=> -- complete
+			  wrinit	=> wrinit,
+			  control	=> ctrl_signal,
+			  i			=> i_signal,
+			  j			=> j_signal,
+			  datain 	=> datain,
+			  radd		=> radd,
+			  dataout	=> dataout
 			  );
 
 	control: controlador
 	port map (clock		=> clock,
-			  resetn	=> -- complete
-			  go		=> -- complete
-			  i			=> -- complete
-			  j			=> -- complete
-			  control	=> -- complete
-			  done		=> -- complete
+			  resetn	=> resetn,
+			  go		=> go,
+			  i			=> i_signal,
+			  j			=> j_signal,
+			  control	=> ctrl_signal,
+			  done		=> done
 			  );
 
 end estruct;

@@ -3,3 +3,15 @@ noleer/
 templates.zip
 contexto/Quartus-lite-18.1.0.625-linux.tar
 contexto/components
+
+# Quartus generados
+laboratorio/templates/db/
+laboratorio/templates/incremental_db/
+laboratorio/templates/output_files/
+laboratorio/templates/simulation/
+laboratorio/templates/c5_pin_model_dump.txt
+laboratorio/templates/sorter_nativelink_simulation.rpt
+laboratorio/templates/*.bak
+
+# Simulacion generados
+laboratorio/solucion/simulacion/ondas.vcd
